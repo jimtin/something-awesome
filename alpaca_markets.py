@@ -47,43 +47,40 @@ def query_alpaca_api(url: str, params: dict) -> dict:
     return json_response
 
 
-# Create a function to get historic candlestick data from Alpaca.Markets
-def get_historic_bars(symbols: list, timeframe: str, limit:int, start_date: datetime, end_date: datetime) -> pandas.DataFrame:
+# Function to get the historic candlestick data from Alpaca.Markets
+def get_historic_bars(symbols: list, timeframe: str, limit: int, start_date: datetime, end_date: datetime) -> pandas.DataFrame:
     """
-    Get historic candlestick data from Alpaca.Markets
-    :param symbols: The stock symbols to query
-    :param timeframe: The timeframe to query
-    :param limit: The number of bars to query
-    :param start_date: The start date for the query
-    :param end_date: The end date for the query
-    :return: A pandas DataFrame of the historic candlestick data
+    Function to retrieve historical candlestick data from Alpaca.Markets
+    :param symbols: The symbols to retrieve the historical data for
+    :param timeframe: The timeframe to retrieve the historical data for
+    :param limit: The number of bars to retrieve
+    :param start_date: The start date for the historical data
+    :param end_date: The end date for the historical data
     """
+
     # Check that the start_date and end_date are datetime objects
     if not isinstance(start_date, datetime.datetime):
         print("The start_date must be a datetime object.")
         raise ValueError("The start_date must be a datetime object.")
     if not isinstance(end_date, datetime.datetime):
-        print("The end_date must be a datetime object.")
         raise ValueError("The end_date must be a datetime object.")
-    
-    # Check that the start date is not after the end date
-    if start_date > end_date:
-        print("The start_date must be before the end_date.")
-        raise ValueError("The start_date must be before the end_date.")
-    
+
     # Check that the end date is not in the future
     if end_date > datetime.datetime.now():
-        print("The end_date must be in the past.")
-        raise ValueError("The end_date must be in the past.")
+        print("The end date is in the future. Setting the end date to now.")
+        end_date = datetime.datetime.now()
+
+    # Check that the start date is not after the end date
+    if start_date > end_date:
+        raise ValueError("The start date cannot be after the end date.")
     
     # Convert the symbols list to a comma-separated string
     symbols_joined = ",".join(symbols)
-    
-    # Set the start and end dates to the correct format
+
+    # Set the start and end dates to the correct format - they should only include days
     start_date = start_date.strftime("%Y-%m-%d")
     end_date = end_date.strftime("%Y-%m-%d")
-    
-    # Set the parameters dictionary for the API query
+    # Create the params dictionary
     params = {
         "symbols": symbols_joined,
         "timeframe": timeframe,
@@ -95,23 +92,22 @@ def get_historic_bars(symbols: list, timeframe: str, limit:int, start_date: date
         "sort": "asc"
     }
     
-    # Set the URL endpoint for the API query
+    # Set the API endpoint
     url = f"https://data.alpaca.markets/v2/stocks/bars"
-    
-    # Send the API query
+    # Send to the base function to query the API
     try:
         json_response = query_alpaca_api(url, params)
     except Exception as exception:
-        print(f"An exception occurred when querying the Alpaca API: API Endpoint: {url}, Parameters: {params}, Exception {exception}")
+        print(f"An exception occurred in the function get_historic_bars() with the parameters {params}: {exception}")
         raise exception
-    
+
     # Extract the bars from the JSON response
     json_response = json_response["bars"]
-    
-    # Create an empty parent Dataframe to store the data
+
+    # Create an empty parent dataframe
     bars_df = pandas.DataFrame()
-    
-    # Iterate through the symbols list and format accordingly
+
+    # Iterate through the symbols list
     for symbol in symbols:
         # Extract the bars for the symbol
         symbol_bars = json_response[symbol]
@@ -145,7 +141,6 @@ def get_historic_bars(symbols: list, timeframe: str, limit:int, start_date: date
 
         # Add the symbol bars to the parent dataframe
         bars_df = pandas.concat([bars_df, symbol_bars_df])
-        
-        return bars_df
-    
-    
+
+    # Return the historical bars
+    return bars_df
